@@ -60,3 +60,166 @@ Ansible is suitable for a variety of environments and use cases, including:
 
 By following the above structure and understanding the key concepts, you can effectively utilize Ansible for automating and managing IT tasks.
 
+
+# Setting Up Ansible with EC2 Instances
+
+This documentation covers the steps to set up three EC2 instances: one controller, one for the app, and one for the database. We will configure SSH access, install Ansible on the controller, and verify connectivity to the app and database instances using Ansible.
+
+## Steps
+
+### 1. Launch EC2 Instances
+
+Launch three EC2 instances with the following roles:
+
+- **Controller Instance**: This instance will have Ansible installed.
+- **App Instance**: This instance will be managed by Ansible.
+- **Database Instance**: This instance will also be managed by Ansible.
+
+Ensure all instances are configured to allow SSH access on port 22.
+
+### 2. SSH into the Controller Instance
+
+SSH into the controller instance from your local machine:
+
+```bash
+ssh -i ~/.ssh/your_key.pem ubuntu@controller_ip_address
+```
+
+### 3. Update and Upgrade the Controller Instance
+
+Once connected to the controller instance, run the following commands to update and upgrade the system:
+
+```bash
+sudo apt-get update
+sudo apt-get upgrade -y
+sudo apt install software-properties-common
+```
+
+### 4. Install Ansible on the Controller Instance
+
+Install Ansible on the controller instance:
+
+```bash
+sudo add-apt-repository --yes --update ppa:ansible/ansible
+sudo apt-get install ansible -y
+```
+
+### 5. Install `tree` Utility
+
+Install the `tree` utility on the controller instance:
+
+```bash
+sudo apt-get install tree -y
+```
+
+### 6. Copy the SSH Key to the Controller Instance
+
+From your local machine, use SCP to copy your SSH private key to the controller instance:
+
+```bash
+scp -i ~/.ssh/your_key.pem ~/.ssh/your_key.pem ubuntu@controller_ip_address:~/.ssh/
+```
+
+### 7. SSH from the Controller to App and Database Instances
+
+On the controller instance, ensure the private key has the correct permissions:
+
+```bash
+chmod 400 ~/.ssh/your_key.pem
+```
+
+Try to SSH into the app and database instances from the controller:
+
+```bash
+ssh -i ~/.ssh/your_key.pem ubuntu@app_instance_ip
+ssh -i ~/.ssh/your_key.pem ubuntu@db_instance_ip
+```
+
+### 8. Add App and Database Instances to Ansible Hosts File
+
+Edit the Ansible hosts file on the controller instance:
+
+```bash
+sudo nano /etc/ansible/hosts
+```
+
+Add the following lines to the file:
+
+```bash
+[web]
+ec2-instance-web ansible_host=3.255.207.158 ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/your_key.pem ansible_port=22
+
+[db]
+ec2-instance-db ansible_host=34.240.235.51 ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/your_key.pem ansible_port=22
+```
+
+### 9. Verify Connectivity with Ansible
+
+Use Ansible to ping the app and database instances to ensure everything is set up correctly:
+
+```bash
+sudo ansible all -m ping
+```
+
+### 10. Additional Ansible Commands
+
+Run the following additional commands to verify and manage your setup:
+
+1. **Display directory structure using `tree`**:
+
+    ```bash
+    tree
+    ```
+
+2. **Check system information for web and db instances**:
+
+    ```bash
+    sudo ansible web -a "uname -a"
+    sudo ansible db -a "uname -a"
+    sudo ansible all -a "uname -a"
+    ```
+
+3. **Check memory usage for the web instance**:
+
+    ```bash
+    sudo ansible web -a "free"
+    ```
+
+4. **Check current date and time for web and all instances**:
+
+    ```bash
+    sudo ansible web -a "date"
+    sudo ansible all -a "date"
+    ```
+
+5. **Update all instances**:
+
+    ```bash
+    sudo ansible all -a "sudo apt-get update -y"
+    ```
+
+6. **Create a test file on the controller**:
+
+    ```bash
+    sudo touch testing-controller.txt
+    ```
+
+7. **List files in the home directory of the web instance**:
+
+    ```bash
+    sudo ansible web -a "ls -a"
+    ```
+
+8. **Copy the test file to the web instance**:
+
+    ```bash
+    sudo ansible web -m copy -a "src=/home/ubuntu/testing-controller.txt dest=/home/ubuntu/testing-controller.txt mode=0644 owner=ubuntu group=ubuntu"
+    ```
+
+### Expected Output
+
+The output should show successful responses from the various Ansible commands, indicating that the setup and file operations were successful.
+
+## Conclusion
+
+By following these steps, you will have set up a controller instance with Ansible, configured SSH access to both app and database instances, and verified connectivity using Ansible. This setup allows for efficient management and automation of your infrastructure.
