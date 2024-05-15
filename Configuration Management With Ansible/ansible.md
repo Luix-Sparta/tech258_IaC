@@ -282,8 +282,7 @@ Node.js Application Deployment Playbook:
         upgrade: yes
         update_cache: yes
         cache_valid_time: 86400 #One day
- 
- 
+
 ## install npm
     - name: Installing npm
       apt:
@@ -302,7 +301,6 @@ Node.js Application Deployment Playbook:
       upgrade: yes
       update_cache: yes
       cache_valid_time: 86400 #One day
- 
  
 ## clone app
  
