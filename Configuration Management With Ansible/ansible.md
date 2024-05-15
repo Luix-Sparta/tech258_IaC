@@ -223,3 +223,117 @@ The output should show successful responses from the various Ansible commands, i
 ## Conclusion
 
 By following these steps, you will have set up a controller instance with Ansible, configured SSH access to both app and database instances, and verified connectivity using Ansible. This setup allows for efficient management and automation of your infrastructure.
+
+
+# Ansible Playbook Documentation
+
+## Introduction
+
+Ansible is an open-source automation tool that allows you to automate tasks such as configuration management, application deployment, and orchestration. Ansible uses YAML-based playbooks to define sets of tasks to be executed on remote hosts.
+
+## Ansible Playbooks
+
+### Structure
+
+Ansible playbooks are written in YAML format and start with three dashes (`---`). Playbooks consist of a series of plays, where each play defines tasks to be executed on specific hosts. Each task within a play defines a specific action to be performed, such as installing a package, copying files, or running commands.
+
+### Example Playbooks
+
+#### Nginx Installation Playbook
+
+```bash
+---
+# creating a playbook to install/configure nginx in the web server
+
+# YAML starts with three dashes
+
+# add the name of the host web
+- hosts: web
+
+# see the logs gather facts
+  gather_facts: yes
+
+# provide admin access - sudo
+  become: true
+
+# add instructions to install nginx on the web server
+  tasks:
+  - name: Installing Nginx web server
+    apt: pkg=nginx state=present
+```
+
+To run this playbook:
+```bash
+sudo ansible-playbook nginx-play.yml
+```
+
+Node.js Application Deployment Playbook:
+```bash
+---
+- hosts: web
+# shows logs while the script is running
+  gather_facts: yes
+# provide sudo permission
+  become: true
+ 
+  tasks:
+    - name: Update and upgrade apt packages
+      apt:
+        upgrade: yes
+        update_cache: yes
+        cache_valid_time: 86400 #One day
+ 
+ 
+## install npm
+    - name: Installing npm
+      apt:
+        name: npm
+        state: present
+ 
+    - name: download latest npm + Mongoose
+      shell: |
+        npm install -g npm@latest
+        npm install mongoose@ -y
+ 
+## update and upgrade agent node
+  tasks:
+  - name: Update and upgrade apt packages
+    apt:
+      upgrade: yes
+      update_cache: yes
+      cache_valid_time: 86400 #One day
+ 
+ 
+## clone app
+ 
+  - name: clone app github repository
+    git:
+      repo: https://github.com/Luix-Sparta/tech258_cicd
+      dest: /app
+      clone: yes
+      update: yes
+## install pm2
+  - name: install pm2
+    shell: |
+      cd /app/app
+      npm install -y
+      npm install pm2@4.0.0 -g
+ 
+## launch app with pm2
+  - name: launch app with pm2
+    shell: |
+      cd /app/app
+      pm2 kill
+      pm2 start app.js
+
+```
+
+## Running Playbooks
+
+To execute a playbook, use the ansible-playbook command followed by the playbook filename. For example:
+```bash
+sudo ansible-playbook nginx-play.yml
+```
+
+## Conclusion
+Ansible playbooks provide a powerful way to automate tasks and manage infrastructure. By defining tasks in YAML format, Ansible enables easy configuration management, application deployment, and system orchestration.
