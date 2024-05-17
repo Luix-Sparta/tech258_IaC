@@ -275,7 +275,13 @@ Node.js Application Deployment Playbook:
   gather_facts: yes
 # provide sudo permission
   become: true
- 
+ # install node
+  tasks:
+    - name: Installing Node.js
+      apt:
+        name: nodejs
+        state: present
+         
   tasks:
     - name: Update and upgrade apt packages
       apt:
@@ -325,7 +331,64 @@ Node.js Application Deployment Playbook:
       pm2 start app.js
 
 ```
+Version 2:
+```bash
+---
+# YAML starts with three dashes
 
+# add the name of the host web
+- hosts: web
+
+# see the logs gather facts
+  gather_facts: yes
+
+# provide admin access - sudo
+  become: true
+
+# add instructions to install nginx on the web server
+  tasks:
+    - name: Installing Nginx web server
+      apt: pkg=nginx state=present
+      # ensure nginx is in a running state
+
+    - name: Installing Node.js and npm
+      apt:
+        name:
+          - nodejs
+          - npm
+        state: present
+
+    - name: Update and upgrade apt packages
+      apt:
+        upgrade: yes
+        update_cache: yes
+        cache_valid_time: 86400 #One day
+
+#    - name: download latest npm + Mongoose
+#      shell: |
+#        npm install -g npm
+#        npm install mongoose@ -y
+
+    - name: clone app github repository
+      git:
+        repo: https://github.com/Luix-Sparta/tech258_cicd
+        dest: /app
+        clone: yes
+        update: yes
+
+    - name: install npm & pm2
+      shell: |
+        cd /app/app
+        npm install -y
+        npm install pm2@4.0.0 -g
+
+    - name: launch app with pm2
+      shell: |
+        cd /app/app
+        pm2 kill
+        pm2 start app.js
+
+```
 ## Running Playbooks
 
 To execute a playbook, use the ansible-playbook command followed by the playbook filename. For example:
@@ -335,3 +398,4 @@ sudo ansible-playbook nginx-play.yml
 
 ## Conclusion
 Ansible playbooks provide a powerful way to automate tasks and manage infrastructure. By defining tasks in YAML format, Ansible enables easy configuration management, application deployment, and system orchestration.
+
