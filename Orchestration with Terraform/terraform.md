@@ -330,7 +330,7 @@ In this setup, we are using Terraform to manage and automate infrastructure prov
 
 ### Architecture Diagram
 
-![alt text](image-2.png)
+![alt text](image-1.png)
 
 ### Code Explanation
 
