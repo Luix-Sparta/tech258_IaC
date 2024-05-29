@@ -89,7 +89,7 @@ resource "aws_instance" "app_instance" {
     instance_type          = "t2.micro"              # Specify the instance type
     associate_public_ip_address = true               # Associate a public IP address
     tags = {
-        Name = "luixhiano-terraform-tech258-app"     # Tag the EC2 instance
+        Name = "lui-terraform-tech258-app"     # Tag the EC2 instance
     }
 }
 ```
@@ -124,7 +124,7 @@ resource "aws_instance" "app_instance" {
     instance_type          = "t2.micro"
     associate_public_ip_address = true
     tags = {
-        Name = "luixhiano-terraform-tech258-app"
+        Name = "lui-terraform-tech258-app"
     }
 }
 ```
@@ -164,7 +164,7 @@ The `main.tf` file contains the main configuration for your Terraform deployment
 
 **Snippet from main.tf:**
 ```bash
-iii
+```
 provider "aws" {
     region = var.region_name
 }
@@ -317,6 +317,298 @@ variable "github_token" {
 The provided Terraform configuration file defines two providers: AWS and GitHub. Each provider is configured with the necessary authentication details (e.g., AWS region, GitHub personal access token).
 
 The configuration then creates resources using these providers. For example, it creates an AWS S3 bucket using the AWS provider and a GitHub repository using the GitHub provider. This demonstrates how you can manage resources across different providers within the same Terraform configuration file.
+
+
+
+### Multi-Provider Terraform Architecture Documentation
+
+This documentation provides a comprehensive explanation of a multi-provider Terraform architecture. The diagram and detailed descriptions below illustrate the setup and relationships between Terraform, AWS services, GitHub, and state management via an S3 bucket.
+
+## Introduction
+
+In this setup, we are using Terraform to manage and automate infrastructure provisioning across multiple providers, specifically AWS and GitHub. Terraform is a powerful tool for infrastructure as code (IaC) that allows us to define cloud resources declaratively and manage their lifecycle effectively. This architecture ensures that our infrastructure is consistently deployed and maintained across different environments.
+
+### Architecture Diagram
+
+![alt text](image-1.png)
+
+### Explanation
+
+### Providers Configuration
+
+```
+provider "aws" {
+  region = "eu-west-1"
+}
+
+provider "github" {
+  token = var.github_token
+}
+```
+
+**Explanation**:  
+- **AWS Provider**: Configures Terraform to use the AWS provider, setting the region to `eu-west-1`.
+- **GitHub Provider**: Configures Terraform to use the GitHub provider, using a token stored in a variable.
+
+### Backend Configuration (S3)
+
+```
+terraform {
+  backend "s3" {
+    bucket = "tech258-lui-terraform"
+    key    = "dev/terraform.tfstate"
+    region = "eu-west-1"
+  }
+}
+```
+
+**Explanation**:  
+- **Backend Configuration**: Specifies that Terraform state files will be stored in an AWS S3 bucket. This centralized state management allows multiple team members to work on the same infrastructure efficiently.
+
+### AWS Resources
+
+#### VPC and Subnets
+
+```
+resource "aws_vpc" "app-vpc" {
+  cidr_block = var.vpc_cidr_block
+
+  tags = {
+    Name = var.vpc_name
+  }
+}
+
+resource "aws_subnet" "app-subnet" {
+  vpc_id            = aws_vpc.app-vpc.id
+  cidr_block        = var.app_subnet_cidr_block
+  availability_zone = "eu-west-1a"
+
+  tags = {
+    Name = var.app_subnet_name
+  }
+}
+
+resource "aws_subnet" "db-subnet" {
+  vpc_id            = aws_vpc.app-vpc.id
+  cidr_block        = var.db_subnet_cidr_block
+  availability_zone = "eu-west-1a"
+
+  tags = {
+    Name = var.db_subnet_name
+  }
+}
+```
+
+**Explanation**:  
+- **VPC**: Creates a Virtual Private Cloud (VPC) with a specified CIDR block.
+- **Subnets**: Creates two subnets within the VPC:
+  - **Public Subnet**: Used for the web application.
+  - **Private Subnet**: Used for the database instance, enhancing security by isolating it from direct internet access.
+
+#### Internet Gateway and Route Table
+
+```
+resource "aws_internet_gateway" "gw" {
+  vpc_id = aws_vpc.app-vpc.id
+}
+
+resource "aws_route_table" "app-route-table" {
+  vpc_id = aws_vpc.app-vpc.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.gw.id
+  }
+
+  route {
+    ipv6_cidr_block = "::/0"
+    gateway_id = aws_internet_gateway.gw.id
+  }
+
+  tags = {
+    Name = var.route_table_name
+  }
+}
+```
+
+**Explanation**:  
+- **Internet Gateway**: Provides internet access to resources within the VPC.
+- **Route Table**: Defines routes to direct traffic from the VPC to the internet through the Internet Gateway.
+
+#### Route Table Association
+
+```
+resource "aws_route_table_association" "a" {
+  subnet_id      = aws_subnet.app-subnet.id
+  route_table_id = aws_route_table.app-route-table.id
+}
+```
+
+**Explanation**:  
+- **Route Table Association**: Associates the route table with the public subnet, enabling internet connectivity for resources within that subnet.
+
+#### Security Groups
+
+```
+resource "aws_security_group" "tech258-lui-allow-web" {
+  name        = "allow_web_traffic"
+  description = "Allow web traffic"
+  vpc_id      = aws_vpc.app-vpc.id
+
+  ingress {
+    description = "HTTPS"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "HTTP"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "SSH"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "tech258-lui-allow-web"
+  }
+}
+
+resource "aws_security_group" "tech258-lui-allow-db" {
+  name        = "allow_db_traffic"
+  description = "Allow database traffic"
+  vpc_id      = aws_vpc.app-vpc.id
+
+  ingress {
+    description = "MongoDB"
+    from_port   = 27017
+    to_port     = 27017
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "SSH"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "tech258-lui-allow-db"
+  }
+}
+```
+
+**Explanation**:  
+- **App Security Group**: Allows HTTP, HTTPS, and SSH traffic to the web instance.
+- **DB Security Group**: Allows MongoDB and SSH traffic to the database instance.
+
+#### EC2 Instances
+
+```
+resource "aws_instance" "db" {
+  ami                    = var.db_ami_id
+  instance_type          = "t2.micro"
+  availability_zone      = "eu-west-1a"
+  key_name               = var.key_name
+  vpc_security_group_ids = [aws_security_group.tech258-lui-allow-db.id]
+  subnet_id              = aws_subnet.db-subnet.id
+  associate_public_ip_address = true
+
+  tags = {
+    Name = "tech258-lui-db"
+  }
+}
+
+resource "aws_instance" "app" {
+  ami                    = var.app_ami_id
+  instance_type          = "t2.micro"
+  availability_zone      = "eu-west-1a"
+  key_name               = var.key_name
+  vpc_security_group_ids = [aws_security_group.tech258-lui-allow-web.id]
+  subnet_id              = aws_subnet.app-subnet.id
+  associate_public_ip_address = true
+
+  user_data = <<-EOF
+                #!/bin/bash
+                sudo apt update -y
+                sudo DEBIAN_FRONTEND=noninteractive apt upgrade -y
+                sudo DEBIAN_FRONTEND=noninteractive apt install nginx -y
+
+                sudo sed -i '51s/.*/\t        proxy_pass http:\/\/localhost:3000;/' /etc/nginx/sites-enabled/default
+                sudo systemctl restart nginx
+                sudo systemctl enable nginx
+                
+                export DB_HOST=mongodb://${aws_instance.db.private_ip}:27017/posts
+
+                curl -fsSL https://deb.nodesource.com/setup_20.x | sudo DEBIAN_FRONTEND=noninteractive -E bash - && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs
+
+                git clone https://github.com/Luix-Sparta/tech258-sparta-test-app
+                cd /tech258-sparta-test-app/app
+
+                sudo -E npm install
+
+                sudo npm install -g pm2 -y
+                pm2 stop app
+                pm2 start app.js 
+                sudo node seeds/seed.js
+                EOF
+
+  tags = {
+    Name = "tech258-lui-app"
+  }
+}
+```
+
+**Explanation**:  
+- **Database Instance**: Creates an EC2 instance for the MongoDB database within the private subnet.
+- **Application Instance**: Creates an EC2 instance for the web application within the public subnet. The user data script:
+  - Installs and configures NGINX.
+  - Installs Node.js and application dependencies.
+  - Clones the application repository and starts the application using PM2.
+
+### GitHub Repository
+
+```
+resource "github_repository" "iac_github_automated_repo" {
+  name        = "IaC-github-automated-repo"
+  description = "Automated repository creation with Terraform"
+  visibility  = "public"
+}
+```
+
+**Explanation**:  
+- **GitHub Repository**: Automates the creation of a GitHub repository using Terraform. This repository can be used to store and manage the Terraform code for the infrastructure.
+
+## Conclusion
+
+This architecture demonstrates how to use Terraform to manage infrastructure across multiple providers, including AWS and GitHub, with centralized state management stored in an S3 bucket. The setup ensures consistent and repeatable infrastructure deployments, enhancing collaboration and efficiency in infrastructure management.
 
 
 ## Conclusion
