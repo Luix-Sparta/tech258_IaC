@@ -332,7 +332,7 @@ In this setup, we are using Terraform to manage and automate infrastructure prov
 
 ![alt text](image-2.png)
 
-### Explanation
+### Code Explanation
 
 ### Providers Configuration
 
