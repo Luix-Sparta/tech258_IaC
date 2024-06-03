@@ -367,7 +367,6 @@ terraform {
   
 - The S3 bucket is in the same region as the infrastructure, ensuring optimal performance and compliance with data locality regulations.
 
-
 **Advantages**:
 - **Collaboration**: All team members access the same state file, ensuring up-to-date information and preventing conflicts.
 - **State Locking**: With DynamoDB, S3 provides state locking and consistency checks, avoiding concurrent modification issues.
