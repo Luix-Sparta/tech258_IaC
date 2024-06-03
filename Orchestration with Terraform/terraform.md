@@ -364,6 +364,8 @@ terraform {
 
 **Explanation**:  
 - **Backend Configuration**: Specifies that Terraform state files will be stored in an AWS S3 bucket. This centralized state management allows multiple team members to work on the same infrastructure efficiently.
+  
+- The S3 bucket is in the same region as the infrastructure, ensuring optimal performance and compliance with data locality regulations.
 
 
 **Advantages**:
